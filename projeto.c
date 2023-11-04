@@ -11,6 +11,7 @@ typedef struct{
 
 FILE *pCadastro;
 Tcadastro itens, itensNull;
+int posicao, opcao, codigo, itemCorreto;
 
 void abrirArquivo(){
     pCadastro = fopen("cadastros.txt", "r+b");
@@ -18,11 +19,10 @@ void abrirArquivo(){
 }
 
 int fazerNovamente(char nomeOp[10]){
-    int opc;
     printf("\n\nDeseja %s outro item (1- sim / 0- nao)? ", nomeOp);
-    scanf("%d", &opc);
+    scanf("%d", &opcao);
 
-    return opc;
+    return opcao;
 }
 
 void mostrarItem(int pos){
@@ -38,12 +38,12 @@ void mostrarItem(int pos){
     printf("\n========================================");
 }
 
-int descobrirPosicao(int codigoItem){
+int descobrirPosicao(int cod){
     rewind(pCadastro);
     fread(&itens, sizeof(Tcadastro), 1, pCadastro);
     
-    for(int pos = 0; feof(pCadastro) == 0; pos++){
-        if (itens.codItem == codigoItem) return pos;
+    for(int p = 0; feof(pCadastro) == 0; p++){
+        if (itens.codItem == cod) return p;
 
         fread(&itens, sizeof(Tcadastro), 1, pCadastro);
     }
@@ -51,41 +51,68 @@ int descobrirPosicao(int codigoItem){
 }
 
 void removerItem(){
+    do{
+        printf("\n========== REMOVER ITEM ==========n\n");
 
+        printf("Insira o codigo do item: ");
+        scanf("%d", &codigo);
+
+        posicao = descobrirPosicao(codigo);
+        itemCorreto = checarCerteza(posicao);
+
+        if(itemCorreto == 1){
+            itensNull.codItem = 0;
+            itensNull.precoUnit = 0;
+            itensNull.quantEstoque = 0;
+
+            fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
+            fwrite(&itensNull, sizeof(Tcadastro), 1, pCadastro);
+
+            printf("Item removido com sucesso.");
+        }
+        opcao = fazerNovamente("remover");
+    } while (opcao == 1);
 }
 
 void consultarItens(){
-    int opc, pos, cod;
     do{
         printf("\nInsira o codigo do item: ");
-        scanf("%d", &cod);
+        scanf("%d", &codigo);
 
-        pos = descobrirPosicao(cod);
+        posicao = descobrirPosicao(codigo);
 
-        if(pos == -1) printf("Item nao encontrado.\n");
-        else mostrarItem(pos);
+        if(posicao == -1) printf("Item nao encontrado.\n");
+        else mostrarItem(posicao);
 
-        opc = fazerNovamente("consultar");
-    } while(opc == 1);
+        opcao = fazerNovamente("consultar");
+    } while(opcao == 1);
+}
+
+int checarCerteza(int pos){
+    itemCorreto = 0;
+
+    if (pos == -1){
+        printf("\nCodigo de item invalido ou nao existe.\n");
+    }
+    else{
+        mostrarItem(pos);
+        printf("\nEste e o item correto (1- sim / 0- nao)? ");
+        scanf("%d", &itemCorreto);
+    }
+    return itemCorreto;
 }
 
 void alterarItem(){
-    int pos, opc, itemCorr = 0, cod;
     do{
         printf("\n==========ALTERAR ITENS==========\n");
 
-        printf("\nInsira o codigo do item: ");
-        scanf("%d", &cod);
-        pos = descobrirPosicao(cod);
+        printf("Insira o codigo do item: ");
+        scanf("%d", &codigo);
 
-        if (pos == -1)
-            printf("Codigo de item invalido ou nao existe.\n");
-        else{
-            mostrarItem(pos);
-            printf("\nEste e o item correto (1- sim / 0- nao)? ");
-            scanf("%d", &itemCorr);
-        }
-        if (itemCorr == 1){
+        posicao = descobrirPosicao(codigo);
+        itemCorreto = checarCerteza(posicao);
+
+        if (itemCorreto == 1){
             printf("\nAlterando item...\n\n");
 
             printf("NOME..........: ");
@@ -101,22 +128,27 @@ void alterarItem(){
 
             printf("\nItem alterado com sucesso!");
             
-            fseek(pCadastro, pos*sizeof(Tcadastro), SEEK_SET);
+            fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
             fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
 
-            mostrarItem(pos);
+            mostrarItem(posicao);
         }
-        opc = fazerNovamente("alterar");
-    } while(opc == 1);  
+        opcao = fazerNovamente("alterar");
+    } while(opcao == 1);  
 }
 
 void incluirItens(){
-    int opc;
+    int tempCod, aux;  
     do{
-        printf("\n==========INCLUSAO DE ITENS==========\n\n");
+        do{
+            printf("\n==========INCLUSAO DE ITENS==========\n\n");
+            printf("CODIGO DO ITEM: ");
+            scanf("%d", &tempCod);
+            aux = impedirIgual(tempCod);
 
-        printf("CODIGO DO ITEM: ");                
-        scanf("%d", &itens.codItem);
+            if (aux == 0) itens.codItem = tempCod;
+        } while(aux == 1);
+        
         printf("NOME..........: ");
         fflush(stdin);
         gets(itens.nome);
@@ -132,19 +164,19 @@ void incluirItens(){
         fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
 
         printf("\nItem cadastrado com sucesso!\n");
-        opc = fazerNovamente("cadastrar");
-    } while(opc == 1);
+        opcao = fazerNovamente("cadastrar");
+    } while(opcao == 1);
 }
+
 void cadastrarItem(){
-    int opc;
-    
+    int pagina;    
     do{
         printf("\n==========CADASTRO DE ITENS==========\n");
         printf("\n1- INCLUIR \n2- ALTERAR \n3- CONSULTAR \n4- EXCLUIR \n0- RETORNAR\n");
         printf("\nOpcao: ");
-        scanf("%d", &opc);
+        scanf("%d", &pagina);
 
-        switch(opc){
+        switch(pagina){
             case 1: incluirItens();   break; 
             case 2: alterarItem();    break;
             case 3: consultarItens(); break;
@@ -153,7 +185,23 @@ void cadastrarItem(){
 
             default: printf("Opcao invalida!"); break;
         }
-    } while (opc != 0);
+    } while (pagina != 0);
+}
+
+int impedirIgual(int cod){
+    rewind(pCadastro);
+    fread(&itens, sizeof(Tcadastro), 1, pCadastro);
+
+    while(feof(pCadastro) == 0){
+        if (itens.codItem == cod){
+            printf("\nEsta codigo já existe!");
+            mostrarItem(descobrirPosicao(cod));
+
+            return 1;
+        }
+        fread(&itens, sizeof(Tcadastro), 1, pCadastro);
+    }
+    return 0;
 }
 
 int main(){
@@ -168,13 +216,13 @@ int main(){
         scanf("%d", &pag);
 
         switch(pag){
-        case 1: cadastrarItem();   break;
-        case 2:                    break;
-        case 3:                    break;
-        case 4:                    break;
-        case 0: fclose(pCadastro); break;
+            case 1: cadastrarItem();   break;
+            case 2:                    break;
+            case 3:                    break;
+            case 4:                    break;
+            case 0: fclose(pCadastro); break;
 
-        default: printf("Opcao invalida\n\n"); break;
+            default: printf("Opcao invalida\n\n"); break;
         }
-    }while (pag != 0);
+    } while (pag != 0);
 }
