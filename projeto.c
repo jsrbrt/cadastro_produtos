@@ -279,10 +279,10 @@ void listaPreco(){
     Tcadastro** pointer = (Tcadastro**) malloc(sizeof(Tcadastro*) * quantidade); 
 
     rewind(pCadastro);
-    fread(pointer[0], sizeof(Tcadastro), 1, pCadastro);
 
     for(posicao = 0; feof(pCadastro) == 0; posicao++)
-    { 
+    {
+        pointer[posicao] = (Tcadastro*) malloc(sizeof(Tcadastro));
         fread(pointer[posicao], sizeof(Tcadastro), 1, pCadastro);
     }
 
