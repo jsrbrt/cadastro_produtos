@@ -11,16 +11,32 @@ typedef struct{
 
 FILE *pCadastro;
 Tcadastro itens, itensNull;
-int posicao, opcao, codigo, itemCorreto, quantidade;
+int posicao, quantidade, temp2;
+char opcao, tempNome[50], confirma, itemCorreto;
+float temp3;
+
 
 void abrirArquivo(){
     pCadastro = fopen("cadastros.txt", "r+b");
     if (pCadastro == NULL) pCadastro = fopen("cadastros.txt", "w+b");
 }
 
-int fazerNovamente(char nomeOp[10]){
-    printf("\n\nDeseja %s outro item (1- sim / 0- nao)? ", nomeOp);
-    scanf("%d", &opcao);
+void lerRegistro(){
+    rewind(pCadastro);
+    fread(&itens, sizeof(Tcadastro), 1, pCadastro);
+
+    for(quantidade = 0; feof(pCadastro) == 0; quantidade++)
+        fread(&itens, sizeof(Tcadastro), 1, pCadastro);
+}
+
+void cabecalho(){
+    printf("\n============= COMERCIO LTDA ============");
+    printf("\n==== SISTEMA DE CONTROLE DE ESTOQUE ====\n");
+}
+
+char fazerNovamente(char nomeOp[10]){
+    printf("\n\nDeseja %s outro item (S/N)? ", nomeOp);
+    scanf("%s", &opcao);
 
     return opcao;
 }
@@ -28,7 +44,8 @@ int fazerNovamente(char nomeOp[10]){
 void mostrarItem(int pos){
     fseek(pCadastro, pos*sizeof(Tcadastro), SEEK_SET);
     fread(&itens, sizeof(Tcadastro), 1, pCadastro);
-
+    
+    cabecalho();
     printf("\n========================================");
     printf("\nCodigo do Item.......: %d", itens.codItem);
     printf("\nNome do Item.........: %s", itens.nome);
@@ -38,217 +55,249 @@ void mostrarItem(int pos){
     printf("\n========================================");
 }
 
-int descobrirPosicao(int cod){
+int descobrirPosicao(char cod[50]){
     rewind(pCadastro);
     fread(&itens, sizeof(Tcadastro), 1, pCadastro);
     
     for(int p = 0; feof(pCadastro) == 0; p++){
-        if (itens.codItem == cod) return p;
+        if (strcmp(itens.nome, cod) == 0) return p;
 
         fread(&itens, sizeof(Tcadastro), 1, pCadastro);
     }
     return -1;
 }
 
-int checarCerteza(int pos){
-    itemCorreto = 0;
+char checarCerteza(int pos){
+    itemCorreto = 'n';
 
     if (pos == -1){
         printf("\nCodigo de item invalido ou nao existe.\n");
     }
     else{
         mostrarItem(pos);
-        printf("\nEste e o item correto (1- sim / 0- nao)? ");
-        scanf("%d", &itemCorreto);
+        printf("\nEste e o item correto (S/N)? ");
+        scanf("%s", &itemCorreto);
     }
     return itemCorreto;
 }
 
+void confirmarAcao(char nomeOp[10]){
+    printf("\nConfirma %s de item (S/N)? ", nomeOp);
+    scanf("%s", &confirma);
+}
+
 void removerItem(){
     do{
+        cabecalho();
         printf("\n========== REMOVER ITEM ==========n\n");
 
-        printf("Insira o codigo do item: ");
-        scanf("%d", &codigo);
+        printf("Insira o nome do item: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
-        if(itemCorreto == 1){
+        if(itemCorreto == 's'){
             itensNull.codItem = 0;
             itensNull.precoUnit = 0;
             itensNull.quantEstoque = 0;
 
-            fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
-            fwrite(&itensNull, sizeof(Tcadastro), 1, pCadastro);
-        
-            quantidade--;
-            printf("Item removido com sucesso.");
+            confirmarAcao("remocao");
+            if(confirma == 's'){
+                fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
+                fwrite(&itensNull, sizeof(Tcadastro), 1, pCadastro);
+                quantidade--;
+                printf("Item removido com sucesso.");
+            }
+            else printf("Remocao cancelada.");
         }
         opcao = fazerNovamente("remover");
-    } while (opcao == 1);
+    } while (opcao == 's');
 }
 
 void consultarItens(){
     do{
-        printf("\nInsira o codigo do item: ");
-        scanf("%d", &codigo);
+        cabecalho();
+        printf("\nInsira o nome do item: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
 
         if(posicao == -1) printf("Item nao encontrado.\n");
         else mostrarItem(posicao);
 
         opcao = fazerNovamente("consultar");
-    } while(opcao == 1);
+    } while(opcao == 's');
 }
 
 void alterarItem(){
     do{
-        printf("\n==========ALTERAR ITENS==========\n");
+        cabecalho();
+        printf("\n========== ALTERAR ITENS ==========\n");
 
-        printf("Insira o codigo do item: ");
-        scanf("%d", &codigo);
+        printf("Insira o nome do item: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
         if (itemCorreto == 1){
             printf("\nAlterando item...\n\n");
 
-            printf("NOME..........: ");
-            fflush(stdin);
-            gets(itens.nome);
-            printf("PRECO.........: ");
-            scanf("%f", &itens.precoUnit);
+            do{
+                printf("PRECO.........: ");
+                scanf("%f", &temp3);
+
+                if(temp3 == 0) printf("Preco deve ser diferente de 0!\n");
+                else itens.precoUnit = temp3;
+            } while (temp3 == 0);
+
             printf("UNIDADE.......: ");
             fflush(stdin);
             gets(itens.unidade);
-            printf("QUANTIDADE....: ");
-            scanf("%d", &itens.quantEstoque);
 
-            printf("\nItem alterado com sucesso!");
-            
-            fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
-            fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+            do{
+                printf("QUANTIDADE....: ");
+                scanf("%d", &temp2);
 
-            mostrarItem(posicao);
+                if(temp2 < 0) printf("A quantidade deve ser maior ou igual a 0!\n");
+                else itens.quantEstoque = temp2;
+            } while (temp2 < 0);
+
+            confirmarAcao("alteracao");
+            if(confirma == 's'){
+                fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
+                fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+                mostrarItem(posicao);
+                printf("\nItem alterado com sucesso!");
+            }
+            else printf("Inclusao cancelada");
         }
         opcao = fazerNovamente("alterar");
-    } while(opcao == 1);  
+    } while(opcao == 's');  
 }
 
-int impedirIgual(int cod){
+char impedirIgual(char cod[50]){
     rewind(pCadastro);
     fread(&itens, sizeof(Tcadastro), 1, pCadastro);
 
     while(feof(pCadastro) == 0){
-        if (itens.codItem == cod){
-            printf("\nEsta codigo já existe!");
+        if (strcmp(itens.nome, cod) == 0){
+            printf("\nEste item ja esta cadastrado!");
             mostrarItem(descobrirPosicao(cod));
 
-            return 1;
+            return 'n';
         }
         fread(&itens, sizeof(Tcadastro), 1, pCadastro);
     }
-    return 0;
+    return 's';
 }
 
 void incluirItens(){
-    int tempCod, aux;  
+    char aux;
     do{
         do{
-            printf("\n==========INCLUSAO DE ITENS==========\n\n");
-            printf("CODIGO DO ITEM: ");
-            scanf("%d", &tempCod);
-            aux = impedirIgual(tempCod);
+            cabecalho();
+            printf("\n========== INCLUSAO DE ITENS ==========\n\n");
+            printf("NOME..........: ");
+            fflush(stdin);
+            gets(tempNome);
+            aux = impedirIgual(tempNome);
 
-            if (aux == 0) itens.codItem = tempCod;
-        } while(aux == 1);
+            if (aux == 's') strcpy(itens.nome,tempNome);
+        } while(aux == 'n');
         
-        printf("NOME..........: ");
-        fflush(stdin);
-        gets(itens.nome);
-        printf("PRECO.........: ");
-        scanf("%f", &itens.precoUnit);
+        do{
+            printf("PRECO.........: ");
+            scanf("%f", &temp3);
+
+            if(temp3 == 0) printf("Preco deve ser diferente de 0!\n");
+            else itens.precoUnit = temp3;
+        } while (temp3 == 0);
+        
         printf("UNIDADE.......: ");
         fflush(stdin);
         gets(itens.unidade);
-        printf("QUANTIDADE....: ");
-        scanf("%d", &itens.quantEstoque);
+        
+        do{
+            printf("QUANTIDADE....: ");
+            scanf("%d", &temp2);
 
-        fseek(pCadastro, 0, SEEK_END);
-        fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+            if(temp2 < 0) printf("A quantidade deve ser maior ou igual a 0!\n");
+            else itens.quantEstoque = temp2;
+        } while (temp2 < 0);
 
-        quantidade++;
-        printf("\nItem cadastrado com sucesso!\n");
+        confirmarAcao("inclusao");
+        if(confirma == 's'){
+            fseek(pCadastro, 0, SEEK_END);
+            fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+            quantidade++;
+            printf("\nItem cadastrado com sucesso!\n");
+        }
+        else printf("Inclusao cancelada");
+      
         opcao = fazerNovamente("cadastrar");
-    } while(opcao == 1);
+    } while(opcao == 's');
 }
 
-void entradaSaidaItens(int escolha){
+void entradaItens(){
     int qntd;
     do{
-        printf("\n==========ENTRADA DE ITENS==========\n");
-        printf("Codigo do produto:");
-        scanf("%d", &codigo);
+        cabecalho();
+        printf("\n========== ENTRADA DE ITENS ==========\n");
+        printf("\nNome do produto: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
-        if(itemCorreto == 1){
-            printf("\n==========INSERINDO ITENS==========\n");
-            if(escolha == 1){
-                printf("Quantidade de entrada: ");
-                scanf("%d", &qntd);
-                itens.quantEstoque = itens.quantEstoque + qntd;
-            }
-            else{
-                printf("Quantidade de saida: ");
-                scanf("%d", &qntd);
-                itens.quantEstoque = itens.quantEstoque - qntd;
-            }
+        if(itemCorreto == 's'){
+            printf("\n========== ENTRADA DE ITENS ==========\n");
+            
+            printf("Quantidade de entrada: ");
+            scanf("%d", &qntd);
+            itens.quantEstoque = itens.quantEstoque + qntd;
+            
             fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
             fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
 
             printf("\nEstoque alterado com sucesso.\n");
             mostrarItem(posicao);
         }
-        if(escolha == 1) opcao = fazerNovamente("aumentar o estoque de");
-        else opcao = fazerNovamente("diminuir o estoque de");
-    } while(opcao != 0);
+        opcao = fazerNovamente("aumentar o estoque de");
+    } while(opcao == 's');
 }
 
-void mudarEstoque(){
+void saidaItens(){
+    int qntd;
     do{
-        printf("\n==========ENTRADA DE ITENS==========\n");
-        printf("PRODUTO:");
-        scanf("%d", &codigo);
+        cabecalho();
+        printf("\n========== SAIDA DE ITENS ==========\n");
+        printf("\nNome do produto: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
-        if(itemCorreto == 1){
-            printf("\n==========INSERINDO ITENS==========\n");
-            printf("NOVO ESTOQUE: ");
-            scanf("%d", &itens.quantEstoque);
-
+        if(itemCorreto == 's'){
+            printf("\n========== SAIDA DE ITENS ==========\n");
+            printf("Quantidade de saida: ");
+            scanf("%d", &qntd);
+            itens.quantEstoque = itens.quantEstoque - qntd;
+            
             fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
             fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
 
-            printf("\nEstoque alterado com sucesso.\n");
+            printf("\nEstoque alterado com sucesso!\n");
             mostrarItem(posicao);
         }
-        opcao = fazerNovamente("mudar o estoque de");
-    } while(opcao !=1);
-}
-
-void lerRegistro(){
-    rewind(pCadastro);
-    fread(&itens, sizeof(Tcadastro), 1, pCadastro);
-
-    for(quantidade = 0; feof(pCadastro) == 0; quantidade++)
-        fread(&itens, sizeof(Tcadastro), 1, pCadastro);
+        opcao = fazerNovamente("diminuir o estoque de");
+    } while(opcao == 's');
 }
 
 void swap(Tcadastro** lista, int n1, int n2){
@@ -268,59 +317,53 @@ void sort(Tcadastro** lista, int n){
                 swapped = 1;
             }
         }
- 
-        if (swapped == 0)
-            break;
+        if (swapped == 0) break;
     }
 }
 
 void listaPreco(){
-    //Tcadastro lista[quantidade];
+    cabecalho();
+
     Tcadastro** pointer = (Tcadastro**) malloc(sizeof(Tcadastro*) * quantidade); 
 
     rewind(pCadastro);
 
-    for(posicao = 0; feof(pCadastro) == 0; posicao++)
-    {
+    for(posicao = 0; feof(pCadastro) == 0; posicao++){
         pointer[posicao] = (Tcadastro*) malloc(sizeof(Tcadastro));
         fread(pointer[posicao], sizeof(Tcadastro), 1, pCadastro);
     }
-
-    rewind(pCadastro);
-    for(posicao = 0; posicao < quantidade; posicao++)
-    {
-        printf("\n========================================");
-        printf("\nNome do Item.........: %s", pointer[posicao]->nome);
-        printf("\nPreco do Item........: R$%.2f", pointer[posicao]->precoUnit);
-        printf("\nQuantidade em estoque: %d", pointer[posicao]->quantEstoque);
-        printf("\nUnidade..............: %s", pointer[posicao]->unidade);
-        printf("\n========================================");
-    }
     sort(pointer, quantidade);
 
-    rewind(pCadastro);
-    for(posicao = 0; posicao < quantidade; posicao++)
-    {
-        printf("\n========================================");
-        printf("\nNome do Item.........: %s", pointer[posicao]->nome);
-        printf("\nPreco do Item........: R$%.2f", pointer[posicao]->precoUnit);
-        printf("\nQuantidade em estoque: %d", pointer[posicao]->quantEstoque);
-        printf("\nUnidade..............: %s", pointer[posicao]->unidade);
-        printf("\n========================================");
+    printf("\nNome do Item \tUnidade \tPreco\n");
+    for(posicao = 0; posicao < quantidade; posicao++){
+        printf("%s \t\t%s \t\tR$%.2f\n", pointer[posicao]->nome, pointer[posicao]->unidade, pointer[posicao]->precoUnit);
     }
 }
 
 void balancoProdutos(){
+    cabecalho();
 
+    Tcadastro** pointer = (Tcadastro**) malloc(sizeof(Tcadastro*) * quantidade); 
+    rewind(pCadastro);
+    for(posicao = 0; feof(pCadastro) == 0; posicao++){
+        pointer[posicao] = (Tcadastro*) malloc(sizeof(Tcadastro));
+        fread(pointer[posicao], sizeof(Tcadastro), 1, pCadastro);
+    }
+    sort(pointer, quantidade);
 
+    printf("\nNome do Item \tUnidade \tPreco Unitario \tQuantidade \tPreco total\n");
+    for(posicao = 0; posicao < quantidade; posicao++){
+        printf("%s \t\t%s \t\tR$%.2f \t\t%d \t\tR$%.2f \n", pointer[posicao]->nome, pointer[posicao]->unidade, pointer[posicao]->precoUnit, pointer[posicao]->quantEstoque, pointer[posicao]->precoUnit*pointer[posicao]->quantEstoque);
+    }
 }
 
 void relatorios(){
     int pag;
     do{
+        cabecalho();
         printf("\n==========MOVIMENTACAO DE ITENS==========\n");
-        printf("\n1- LISTA DE PRECOS \n2- BALANCO FISICO/FINANCEIRO \n0- RETORNAR\n");
-        printf("\nOpcao: ");
+        printf("\n\t1- LISTA DE PRECOS \n\t2- BALANCO FISICO/FINANCEIRO \n\t0- RETORNAR\n");
+        printf("\n\tOpcao: ");
         scanf("%d", &pag);
        
         switch(pag){
@@ -334,41 +377,53 @@ void relatorios(){
 }
 
 void reajustarPreco(){
+    float percentual;
     do{
-        printf("\n==========REAJUSTE DE PRECO==========\n");
-        printf("PRODUTO:");
-        scanf("%d", &codigo);
+        cabecalho();
+        printf("\n========== REAJUSTE DE PRECO ==========\n");
+        printf("\nNome do produto: ");
+        fflush(stdin);
+        gets(tempNome);
 
-        posicao = descobrirPosicao(codigo);
+        posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
-        if(itemCorreto == 1){
-            printf("\n==========REAJUSTANDO PRECO==========\n");
-            printf("NOVO PRECO: ");
-            scanf("%d", &itens.quantEstoque);
+        if(itemCorreto == 's'){
+            printf("\n========== REAJUSTANDO PRECO ==========\n");
+            printf("PERCENTUAL DE REAJUSTE (3.5 ou -15.8): ");
+            scanf("%f", &percentual);
 
-            fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
-            fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+            if(percentual > 0)
+                itens.quantEstoque = itens.quantEstoque + ((percentual*itens.quantEstoque)/100);
+            else
+                itens.quantEstoque = itens.quantEstoque - ((percentual*itens.quantEstoque)/100);
 
-            printf("\nPreco alterado com sucesso.\n");
-            mostrarItem(posicao);
+            confirmarAcao("reajuste");
+            if(confirma == 's'){
+                fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
+                fwrite(&itens, sizeof(Tcadastro), 1, pCadastro);
+
+                printf("\nPreco alterado com sucesso.\n");
+                mostrarItem(posicao);
+            }
+            else printf("Reajuste cancelado");
         }
         opcao = fazerNovamente("alterar o preco de");
-    } while(opcao !=1);
+    } while(opcao == 's');
 }
 
 void movimentarItem(){
     int pag;
     do{
+        cabecalho();
         printf("\n==========MOVIMENTACAO DE ITENS==========\n");
-        printf("\n1- ENTRADA \n2- SAIDA \n3- DEFINIR ESTOQUE \n0- RETORNAR\n");
-        printf("\nOpcao: ");
+        printf("\n\t1- ENTRADA \n\t2- SAIDA \n\t0- RETORNAR\n");
+        printf("\n\tOpcao: ");
         scanf("%d", &pag);
        
         switch(pag){
-            case 1: entradaSaidaItens(1); break;
-            case 2: entradaSaidaItens(0); break;
-            case 3: mudarEstoque(); break;
+            case 1: entradaItens(1); break;
+            case 2: saidaItens(0); break;
             case 0: break;
 
             default: printf("Opcao invalida!"); break;
@@ -379,9 +434,10 @@ void movimentarItem(){
 void cadastrarItem(){
     int pagina;    
     do{
-        printf("\n==========CADASTRO DE ITENS==========\n");
-        printf("\n1- INCLUIR \n2- ALTERAR \n3- CONSULTAR \n4- EXCLUIR \n0- RETORNAR\n");
-        printf("\nOpcao: ");
+        cabecalho();
+        printf("\n========== CADASTRO DE ITENS ==========\n");
+        printf("\n\t1- INCLUIR \n\t2- ALTERAR \n\t3- CONSULTAR \n\t4- EXCLUIR \n\t0- RETORNAR\n");
+        printf("\n\tOpcao: ");
         scanf("%d", &pagina);
 
         switch(pagina){
@@ -402,10 +458,10 @@ int main(){
     lerRegistro();
 
     do{
-        printf("============= COMERCIO LTDA ============\n");
-        printf("==== SISTEMA DE CONTROLE DE ESTOQUE ====\n");
-        printf("\n1- CADASTRO DE ITENS \n2- MOVIMENTACAO \n3- REAJUSTE DE VALOR \n4- RELATORIO \n0- FINALIZAR\n");
-        printf("\nOpcao: ");
+        cabecalho();
+        printf("============ MENU PRINCIPAL ============\n");
+        printf("\n\t1- CADASTRO DE ITENS \n\t2- MOVIMENTACAO \n\t3- REAJUSTE DE VALOR \n\t4- RELATORIO \n\t0- FINALIZAR\n");
+        printf("\n\tOpcao: ");
         scanf("%d", &pag);
 
         switch(pag){
