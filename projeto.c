@@ -29,6 +29,7 @@ void lerRegistro(){
 }
 
 void cabecalho(){
+    system("cls");
     printf("\n============= COMERCIO LTDA ============");
     printf("\n==== SISTEMA DE CONTROLE DE ESTOQUE ====\n");
 }
@@ -49,7 +50,7 @@ void mostrarItem(int pos){
     printf("\nPreco do Item........: R$%.2f", itens.precoUnit);
     printf("\nQuantidade em estoque: %d", itens.quantEstoque);
     printf("\nUnidade..............: %s", itens.unidade);
-    printf("\n========================================");
+    printf("\n========================================\n");
 }
 
 int descobrirPosicao(char cod[50]){
@@ -67,8 +68,10 @@ int descobrirPosicao(char cod[50]){
 char checarCerteza(int pos){
     itemCorreto = 'n';
 
-    if (pos == -1)
-        printf("\nCodigo de item invalido ou nao existe.\n");
+    if (pos == -1){
+        printf("\nNome do item invalido ou nao existe.\n");
+        system("pause");
+    }
     else{
         mostrarItem(pos);
         printf("\nEste e o item correto (S/N)? ");
@@ -101,7 +104,7 @@ void removerItem(){
             if(confirma == 's'){
                 fseek(pCadastro, posicao *sizeof(Tcadastro), SEEK_SET);
                 fwrite(&itensNull, sizeof(Tcadastro), 1, pCadastro);
-                quantidade--;
+                //quantidade--;
                 printf("Item removido com sucesso.");
             }
             else printf("Remocao cancelada.");
@@ -119,7 +122,10 @@ void consultarItens(){
 
         posicao = descobrirPosicao(tempNome);
 
-        if(posicao == -1) printf("Item nao encontrado.\n");
+        if(posicao == -1) {
+            printf("Item nao encontrado.\n");
+            system("pause");
+        }
         else mostrarItem(posicao);
 
         opcao = fazerNovamente("consultar");
@@ -138,7 +144,7 @@ void alterarItem(){
         posicao = descobrirPosicao(tempNome);
         itemCorreto = checarCerteza(posicao);
 
-        if (itemCorreto == 1){
+        if (itemCorreto == 's'){
             printf("\nAlterando item...\n\n");
 
             do{
@@ -182,7 +188,8 @@ char impedirIgual(char cod[50]){
         if (strcmp(itens.nome, cod) == 0){
             printf("\nEste item ja esta cadastrado!");
             mostrarItem(descobrirPosicao(cod));
-
+            system("pause");
+            
             return 'n';
         }
         fread(&itens, sizeof(Tcadastro), 1, pCadastro);
@@ -332,6 +339,7 @@ void listaPreco(){
 
         printf("%s \t\t%s \t\tR$%.2f\n", pointer[posicao]->nome, pointer[posicao]->unidade, pointer[posicao]->precoUnit);
     }
+    system("pause");
 }
 
 void balancoProdutos(){
@@ -351,6 +359,7 @@ void balancoProdutos(){
 
         printf("%s \t\t%s \t\tR$%.2f \t\t%d \t\tR$%.2f \n", pointer[posicao]->nome, pointer[posicao]->unidade, pointer[posicao]->precoUnit, pointer[posicao]->quantEstoque, pointer[posicao]->precoUnit*pointer[posicao]->quantEstoque);
     }
+    system("pause");
 }
 
 void relatorios(){
@@ -388,10 +397,7 @@ void reajustarPreco(){
             printf("PERCENTUAL DE REAJUSTE (3.5 ou -15.8): ");
             scanf("%f", &percentual);
 
-            if(percentual > 0)
-                itens.precoUnit = itens.precoUnit + ((percentual*itens.precoUnit)/100);
-            else
-                itens.precoUnit = itens.precoUnit - ((percentual*itens.precoUnit)/100);
+            itens.precoUnit = itens.precoUnit + ((percentual*itens.precoUnit)/100);
 
             confirmarAcao("reajuste");
             if(confirma == 's'){
@@ -418,7 +424,7 @@ void movimentarItem(){
        
         switch(pag){
             case 1: entradaItens(); break;
-            case 2: saidaItens(); break;
+            case 2: saidaItens();   break;
             case 0: break;
             default: printf("Opcao invalida!"); break;
         }
